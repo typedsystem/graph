@@ -1,0 +1,15 @@
+[project]
+name = "graph"
+version = "0.0.0"
+description = "The graph library of typedsystem: a typed approach to Python"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = []
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["graph*"]
