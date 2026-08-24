@@ -1,9 +1,10 @@
 from graph.mods.meta import NODE, EDGE, GRAPH
+from model import Model
 
-class Node(metaclass=NODE):
+class Node(Model, metaclass=NODE):
     __is_base_model__ = True
 
-class Edge(metaclass=EDGE):
+class Edge(Model, metaclass=EDGE):
     __is_base_model__ = True
 
     def orderof(self):
@@ -19,18 +20,21 @@ class Edge(metaclass=EDGE):
     def __contains__(self, item):
         return item in getattr(self, "__nodes__", [])
 
+
 class Graph(metaclass=GRAPH):
     __is_base_graph__ = True
 
     @property
     def add(self):
         if not hasattr(self, "_add"):
+            from graph.helper.types import _GraphAdd
             self._add = _GraphAdd(self)
         return self._add
 
     @property
     def rm(self):
         if not hasattr(self, "_rm"):
+            from graph.helper.types import _GraphRm
             self._rm = _GraphRm(self)
         return self._rm
 
@@ -71,38 +75,31 @@ class Graph(metaclass=GRAPH):
     def induced(self, *elements):
         explicit_nodes = set()
         explicit_edges = set()
-
         for el in elements:
             if hasattr(el, "__nodes__"):
                 explicit_edges.add(el)
             else:
                 explicit_nodes.add(el)
-
         nodes_set = set(explicit_nodes)
         for e in explicit_edges:
             nodes_set.update(getattr(e, "__nodes__", []))
-
         if not nodes_set.issubset(self.__nodes__):
             from typed.mods.err import TypeErr
             raise TypeErr(
                 message="One or more nodes not found in graph",
                 term=elements
             )
-
         if not explicit_edges.issubset(self.__edges__):
             from typed.mods.err import TypeErr
             raise TypeErr(
                 message="One or more edges not found in graph",
                 term=elements
             )
-
         subgraph = self.__class__()
         subgraph.__nodes__.update(nodes_set)
-
         for e in self.__edges__:
             if e in explicit_edges or set(getattr(e, "__nodes__", [])).issubset(explicit_nodes):
                 subgraph.__edges__.add(e)
-
         return subgraph
 
     def __size__(self):
@@ -111,12 +108,10 @@ class Graph(metaclass=GRAPH):
     def __issub__(self, other):
         if not hasattr(other, "__nodes__") or not hasattr(other, "__edges__"):
             return False
-
         sub_nodes = getattr(self, "__nodes__", set())
         sup_nodes = getattr(other, "__nodes__", set())
         if not sub_nodes.issubset(sup_nodes):
             return False
-
         sub_edges = getattr(self, "__edges__", set())
         sup_edges = getattr(other, "__edges__", set())
         return sub_edges.issubset(sup_edges)
@@ -125,5 +120,6 @@ class Graph(metaclass=GRAPH):
         if item in getattr(self, "__nodes__", set()):
             return True
         return item in getattr(self, "__edges__", set())
+
 
 Digraph = Graph(directed=True)
