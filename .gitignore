@@ -5,9 +5,10 @@ __pycache__/
 wheels/
 *.egg-info
 .env
-.venv
+.venv/
 *.py[oc]
 __test__.py
 models.py
 *.py[oc]
 ./py.lock
+*.ignore.*
