@@ -4,21 +4,25 @@ __imports__ = {
     "graph.mods.prop": [
         "prop"
     ],
-    "graph.mods.checker": [
+    "graph.checker": [
         "check", "require"
     ],
-    "graph.mods.types": [
+    "graph.types": [
         "Node",
         "Edge", "Arrow",
         "Graph", "Digraph"
+    ],
+    "graph.wrap": [
+        "node", "edge"
     ]
 }
 
 if lazy(__imports__):
     from graph.mods.prop import prop
-    from graph.mods.checker import check, require
-    from graph.mods.types import (
+    from graph.checker import check, require
+    from graph.types import (
         Node,
         Edge, Arrow,
         Graph, Digraph
     )
+    from graph.wrap import node, edge
