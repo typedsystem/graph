@@ -1,16 +1,6 @@
 from typed.mods.check import Checker
 
 class GraphChecker(Checker):
-    def isgraph(self, entity) -> bool:
-        from graph.mods.types import Graph
-
-        if self.explode:
-            from typed.mods.check import require
-            require.isterm(entity, Graph)
-
-        from typed.mods.check import check
-        return check.isterm(entity, Graph)
-
     def isnode(self, entity) -> bool:
         from graph.mods.types import Node
         if self.explode:
@@ -75,6 +65,111 @@ class GraphChecker(Checker):
             )
 
         return is_hyper
+
+    def isloop(self, entity) -> bool:
+        from graph.mods.prop import prop
+        from typed.mods.err import NotDefined
+        nodes = prop.nodesof(entity)
+        if nodes is NotDefined:
+            if self.explode:
+                from typed.mods.err import TypeErr
+                raise TypeErr(
+                    message="Entity has no nodes",
+                    term=entity
+                )
+            return False
+
+        is_l = len(set(nodes)) == 1
+
+        if not is_l and self.explode:
+            from typed.mods.err import TypeErr
+            raise TypeErr(
+                message="Edge is not a loop",
+                term=entity
+            )
+        return is_l
+
+    def isgraph(self, entity) -> bool:
+        from graph.mods.types import Graph
+
+        if self.explode:
+            from typed.mods.check import require
+            require.isterm(entity, Graph)
+
+        from typed.mods.check import check
+        return check.isterm(entity, Graph)
+
+    def isacyclic(self, entity) -> bool:
+        from graph.mods.types import Acyclic
+
+        if self.explode:
+            from typed.mods.check import require
+            require.isterm(entity, Acyclic)
+
+        from typed.mods.check import check
+        return check.isterm(entity, Acyclic)
+
+    def isregular(self, entity) -> bool:
+        from graph.mods.prop import prop
+        from typed.mods.err import NotDefined
+
+        nodes = prop.nodesof(entity)
+        edges = prop.edgesof(entity)
+
+        if nodes is NotDefined or edges is NotDefined:
+            if self.explode:
+                from typed.mods.err import TypeErr
+                raise TypeErr(
+                    message="Entity is missing nodes or edges",
+                    term=entity
+                )
+            return False
+
+        if not nodes:
+            return True
+
+        degrees = {n: 0 for n in nodes}
+        for e in edges:
+            for n in getattr(e, "__nodes__", []):
+                if n in degrees:
+                    degrees[n] += 1
+
+        is_reg = len(set(degrees.values())) <= 1
+
+        if not is_reg and self.explode:
+            from typed.mods.err import TypeErr
+            raise TypeErr(
+                message="Graph is not regular",
+                term=entity
+            )
+        return is_reg
+
+    def iscomplete(self, entity) -> bool:
+        from graph.mods.prop import prop
+        from typed.mods.err import NotDefined
+
+        nodes = prop.nodesof(entity)
+        edges = prop.edgesof(entity)
+
+        if nodes is NotDefined or edges is NotDefined:
+            if self.explode:
+                from typed.mods.err import TypeErr
+                raise TypeErr(
+                    message="Entity is missing nodes or edges",
+                    term=entity
+                )
+            return False
+
+        nodes_set = set(nodes)
+        is_comp = all(set(getattr(e, "__nodes__", [])) == nodes_set for e in edges)
+
+        if not is_comp and self.explode:
+            from typed.mods.err import TypeErr
+            raise TypeErr(
+                message="Graph is not complete",
+                term=entity
+            )
+        return is_comp
 
 require = GraphChecker(
     quantifier=None,

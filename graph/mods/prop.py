@@ -93,3 +93,11 @@ class prop:
             return count
 
         return NotDefined
+
+    @staticmethod
+    def loopsof(entity):
+        from typed.mods.err import NotDefined
+        edges = getattr(entity, "__edges__", NotDefined)
+        if edges is not NotDefined:
+            return {e for e in edges if len(set(getattr(e, "__nodes__", []))) == 1}
+        return NotDefined

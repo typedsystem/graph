@@ -1,4 +1,4 @@
-from graph.mods.meta import NODE, EDGE, GRAPH
+from graph.mods.meta import NODE, EDGE, GRAPH, DIGRAPH, ACYCLIC
 from model import Model
 
 class Node(Model, metaclass=NODE):
@@ -20,9 +20,27 @@ class Edge(Model, metaclass=EDGE):
     def __contains__(self, item):
         return item in getattr(self, "__nodes__", [])
 
-
 class Graph(metaclass=GRAPH):
     __is_base_graph__ = True
+
+    def __size__(self):
+        return self.sizeof()
+
+    def __issub__(self, other):
+        if not hasattr(other, "__nodes__") or not hasattr(other, "__edges__"):
+            return False
+        sub_nodes = getattr(self, "__nodes__", set())
+        sup_nodes = getattr(other, "__nodes__", set())
+        if not sub_nodes.issubset(sup_nodes):
+            return False
+        sub_edges = getattr(self, "__edges__", set())
+        sup_edges = getattr(other, "__edges__", set())
+        return sub_edges.issubset(sup_edges)
+
+    def __contains__(self, item):
+        if item in getattr(self, "__nodes__", set()):
+            return True
+        return item in getattr(self, "__edges__", set())
 
     @property
     def add(self):
@@ -65,7 +83,13 @@ class Graph(metaclass=GRAPH):
                 count += 1
         return count
 
+    def loopsof(self):
+        return {e for e in getattr(self, "__edges__", set()) if len(set(getattr(e, "__nodes__", []))) == 1}
+
     def cleanup(self):
+        """
+        Clean orphan nodes.
+        """
         active_nodes = set()
         for e in getattr(self, "__edges__", set()):
             active_nodes.update(getattr(e, "__nodes__", []))
@@ -102,24 +126,18 @@ class Graph(metaclass=GRAPH):
                 subgraph.__edges__.add(e)
         return subgraph
 
-    def __size__(self):
-        return self.sizeof()
+class Acyclic(Graph, metaclass=ACYCLIC):
+    @property
+    def add(self):
+        if not hasattr(self, "_add"):
+            from graph.helper.types import _AcyclicAdd
+            self._add = _AcyclicAdd(self)
+        return self._add
 
-    def __issub__(self, other):
-        if not hasattr(other, "__nodes__") or not hasattr(other, "__edges__"):
-            return False
-        sub_nodes = getattr(self, "__nodes__", set())
-        sup_nodes = getattr(other, "__nodes__", set())
-        if not sub_nodes.issubset(sup_nodes):
-            return False
-        sub_edges = getattr(self, "__edges__", set())
-        sup_edges = getattr(other, "__edges__", set())
-        return sub_edges.issubset(sup_edges)
-
-    def __contains__(self, item):
-        if item in getattr(self, "__nodes__", set()):
-            return True
-        return item in getattr(self, "__edges__", set())
-
-
-Digraph = Graph(directed=True)
+class Acyclic(Graph, metaclass=DIGRAPH):
+    @property
+    def add(self):
+        if not hasattr(self, "_add"):
+            from graph.helper.types import _DigraphAdd
+            self._add = _DigraphAdd(self)
+        return self._add

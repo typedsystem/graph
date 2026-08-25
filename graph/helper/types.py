@@ -46,6 +46,28 @@ class _GraphAdd:
 
         return self.graph
 
+class _AcyclicAdd(_GraphAdd):
+    def edge(self_add, *edges, directed=None):
+        from typed.mods.err import TypeErr
+        for e in edges:
+            if len(set(getattr(e, "__nodes__", []))) == 1:
+                raise TypeErr(
+                    message="Cannot add a loop to an explicitly declared acyclic graph",
+                    term=e
+                )
+        return super().edge(*edges, directed=directed)
+
+class _DigraphAdd(_GraphAdd):
+    def edge(self_add, *edges, directed=None):
+        from typed.mods.err import TypeErr
+        for e in edges:
+            e_dir = getattr(e, "__directed__", None)
+            if directed is not True and e_dir is not True:
+                raise TypeErr(
+                    message="Digraph accepts only directed arrows",
+                    term=e
+                )
+        return super().edge(*edges, directed=True if directed is None else directed)
 
 class _GraphRm:
     def __init__(self, graph):

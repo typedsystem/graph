@@ -153,3 +153,23 @@ class GRAPH(TYPE):
         for e in inst_edges:
             inst.add.edge(e)
         return inst
+
+@closure(lt="__issub__")
+class DIGRAPH(GRAPH):
+    def __isterm__(typ, trm):
+        if not super().__isterm__(trm):
+            return False
+        edges = getattr(trm, "__edges__", set())
+        return all(getattr(e, "__directed__", False) is True for e in edges)
+
+@closure(lt="__issub__")
+class ACYCLIC(GRAPH):
+    def __isterm__(typ, trm):
+        if not super().__isterm__(trm):
+            return False
+        from graph.mods.prop import prop
+        from typed.mods.err import NotDefined
+        loops = prop.loopsof(trm)
+        if loops is NotDefined:
+            return False
+        return len(loops) == 0
