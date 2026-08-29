@@ -87,35 +87,13 @@ class GRAPH(TYPE):
                 return False
         return True
 
-    def __issub__(cls, other):
-        if not isinstance(other, GRAPH):
-            return False
-        from typed.mods.typesystem import issub
-        oth_nodes = getattr(other, "__nodes_type__", None)
-        if oth_nodes is not None:
-            cls_nodes = getattr(cls, "__nodes_type__", None)
-            if cls_nodes is None or not issub(cls_nodes, oth_nodes):
-                return False
-        oth_edges = getattr(other, "__edges_type__", None)
-        if oth_edges is not None:
-            cls_edges = getattr(cls, "__edges_type__", None)
-            if cls_edges is None or not issub(cls_edges, oth_edges):
-                return False
-        oth_dir = getattr(other, "__directed__", None)
-        if oth_dir is not None:
-            if getattr(cls, "__directed__", None) != oth_dir:
-                return False
-        oth_ord = getattr(other, "__order__", None)
-        if oth_ord is not None:
-            if getattr(cls, "__order__", None) != oth_ord:
-                return False
-        return True
-
     def __call__(met, *nodes, edge=None, directed=None, order=None, **kwargs):
         if getattr(met, '__is_base_graph__', False) or met.__name__ == 'Graph':
             from typed.mods.init import TYPESYSTEM
             from typed.types import Set
             from graph.mods.types import Node, Edge
+            if not nodes and "node" in kwargs:
+                nodes = (kwargs["node"],)
             _nodes = Set(*nodes) if nodes else Set(Node)
             _edges = Set(edge) if edge else Set(Edge)
             cache_key = (met, _nodes, _edges, directed, order)
@@ -131,7 +109,6 @@ class GRAPH(TYPE):
             Graph.__name__ = f"{met.__name__}({_nodes.__name__})"
             met.__cache__[cache_key] = Graph
             return Graph
-
         inst = type.__call__(met)
         inst_nodes = kwargs.get("nodes", set())
         inst_edges = kwargs.get("edges", set())
@@ -146,7 +123,7 @@ class GRAPH(TYPE):
         inst.__order__ = getattr(met, "__order__", order)
         for e in inst_edges:
             inst.add.edge(e)
-        return inst 
+        return inst
 
 @closure(lt="__issub__")
 class DIGRAPH(GRAPH):
