@@ -23,21 +23,17 @@ class EDGE(MODEL):
 
     def __call__(met, *args, __origin_cls__=None, __defaults__=None, __extends__=None, **fields):
         if getattr(met, '__is_base_model__', False) or met.__name__ == 'Edge':
-            if not fields and not args:
-                from typed.mods.types.constructor import Tuple
-                from graph.mods.types import Node
-                fields = {
-                    "__nodes__": Tuple(Node),
-                    "__directed__": None,
-                    "__order__": -1
-                }
-            else:
-                fields.setdefault("__directed__", getattr(met, "__directed__", None))
-                if args:
-                    fields["__nodes__"] = list(args)
-                elif "__nodes__" not in fields:
-                    fields["__nodes__"] = []
-                fields["__order__"] = len(fields["__nodes__"])
+            from typed.mods.types.constructor import Tuple, Maybe
+            from typed.mods.types.atomic import Int, Bool
+            from graph.mods.types import Node
+
+            if args:
+                fields["__nodes__"] = Tuple(*args)
+            elif "__nodes__" not in fields:
+                fields["__nodes__"] = Tuple(Node)
+
+            fields.setdefault("__directed__", Maybe(Bool))
+            fields.setdefault("__order__", Int)
 
             return super().__call__(
                 __origin_cls__=__origin_cls__,
@@ -47,14 +43,15 @@ class EDGE(MODEL):
             )
 
         if args:
-            fields["__nodes__"] = list(args)
+            fields["__nodes__"] = tuple(args)
         elif "__nodes__" not in fields:
-            fields["__nodes__"] = []
-        fields.setdefault("__directed__", getattr(met, "__directed__", None))
+            fields["__nodes__"] = ()
+
+        met_dir = getattr(met, "__directed__", None)
+        fields.setdefault("__directed__", met_dir if isinstance(met_dir, bool) else None)
         fields["__order__"] = len(fields["__nodes__"])
 
         return super().__call__(**fields)
-
 
 @closure(lt="__issub__")
 class GRAPH(TYPE):

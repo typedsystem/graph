@@ -55,8 +55,15 @@ def edge(__cls__=None, *, check=None, lazy=None, strict=None, ordered=None, dire
         defaults = {k: getattr(c, k) for k in fields if hasattr(c, k)}
         extends = [b for b in c.__bases__ if b is not object]
 
+        _nodes_args = ()
+        if nodes is not None:
+            if isinstance(nodes, (tuple, list, set)):
+                _nodes_args = tuple(nodes)
+            else:
+                _nodes_args = (nodes,)
+
         cls_edge = Edge(
-            *(nodes if nodes is not None else []),
+            *_nodes_args,
             __origin_cls__=c,
             __defaults__=defaults,
             __extends__=extends,
