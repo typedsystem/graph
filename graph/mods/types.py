@@ -1,5 +1,6 @@
 from graph.mods.meta import NODE, EDGE, GRAPH, DIGRAPH, ACYCLIC
 from model import Model
+from graph.helper.types import _GraphAdd, _GraphRm, _AcyclicAdd, _DigraphAdd
 
 class Node(Model, metaclass=NODE):
     __is_base_model__ = True
@@ -23,6 +24,9 @@ class Edge(Model, metaclass=EDGE):
 class Graph(metaclass=GRAPH):
     __is_base_graph__ = True
 
+    def __call__(self, *args, **kwargs) -> 'Graph':
+        return self
+
     def __size__(self):
         return self.sizeof()
 
@@ -43,16 +47,14 @@ class Graph(metaclass=GRAPH):
         return item in getattr(self, "__edges__", set())
 
     @property
-    def add(self):
+    def add(self) -> _GraphAdd:
         if not hasattr(self, "_add"):
-            from graph.helper.types import _GraphAdd
             self._add = _GraphAdd(self)
         return self._add
 
     @property
-    def rm(self):
+    def rm(self) -> _GraphRm:
         if not hasattr(self, "_rm"):
-            from graph.helper.types import _GraphRm
             self._rm = _GraphRm(self)
         return self._rm
 
@@ -87,9 +89,6 @@ class Graph(metaclass=GRAPH):
         return {e for e in getattr(self, "__edges__", set()) if len(set(getattr(e, "__nodes__", []))) == 1}
 
     def cleanup(self):
-        """
-        Clean orphan nodes.
-        """
         active_nodes = set()
         for e in getattr(self, "__edges__", set()):
             active_nodes.update(getattr(e, "__nodes__", []))
@@ -107,6 +106,7 @@ class Graph(metaclass=GRAPH):
         nodes_set = set(explicit_nodes)
         for e in explicit_edges:
             nodes_set.update(getattr(e, "__nodes__", []))
+
         if not nodes_set.issubset(self.__nodes__):
             from typed.mods.err import TypeErr
             raise TypeErr(
@@ -119,6 +119,7 @@ class Graph(metaclass=GRAPH):
                 message="One or more edges not found in graph",
                 term=elements
             )
+
         subgraph = self.__class__()
         subgraph.__nodes__.update(nodes_set)
         for e in self.__edges__:
@@ -127,17 +128,21 @@ class Graph(metaclass=GRAPH):
         return subgraph
 
 class Acyclic(Graph, metaclass=ACYCLIC):
+    def __call__(self, *args, **kwargs) -> 'Acyclic':
+        return self
+
     @property
-    def add(self):
+    def add(self) -> _AcyclicAdd:
         if not hasattr(self, "_add"):
-            from graph.helper.types import _AcyclicAdd
             self._add = _AcyclicAdd(self)
         return self._add
 
-class Acyclic(Graph, metaclass=DIGRAPH):
+class Digraph(Graph, metaclass=DIGRAPH):
+    def __call__(self, *args, **kwargs) -> 'Digraph':
+        return self
+
     @property
-    def add(self):
+    def add(self) -> _DigraphAdd:
         if not hasattr(self, "_add"):
-            from graph.helper.types import _DigraphAdd
             self._add = _DigraphAdd(self)
         return self._add

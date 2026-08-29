@@ -116,21 +116,18 @@ class GRAPH(TYPE):
             from typed.mods.init import TYPESYSTEM
             from typed.types import Set
             from graph.mods.types import Node, Edge
-
             _nodes = Set(*nodes) if nodes else Set(Node)
             _edges = Set(edge) if edge else Set(Edge)
-
             cache_key = (met, _nodes, _edges, directed, order)
             if cache_key in met.__cache__:
                 return met.__cache__[cache_key]
-
             class Graph(met, metaclass=GRAPH):
                 __typesystems__ = {TYPESYSTEM}
                 __nodes_type__ = _nodes
                 __edges_type__ = _edges
                 __directed__ = directed
                 __order__ = order
-
+                __is_base_graph__ = False
             Graph.__name__ = f"{met.__name__}({_nodes.__name__})"
             met.__cache__[cache_key] = Graph
             return Graph
@@ -138,21 +135,18 @@ class GRAPH(TYPE):
         inst = type.__call__(met)
         inst_nodes = kwargs.get("nodes", set())
         inst_edges = kwargs.get("edges", set())
-
         if not inst_nodes and inst_edges:
             inferred = set()
             for e in inst_edges:
                 inferred.update(getattr(e, "__nodes__", []))
             inst_nodes = inferred
-
         inst.__nodes__ = inst_nodes
         inst.__edges__ = set()
         inst.__directed__ = getattr(met, "__directed__", directed)
         inst.__order__ = getattr(met, "__order__", order)
-
         for e in inst_edges:
             inst.add.edge(e)
-        return inst
+        return inst 
 
 @closure(lt="__issub__")
 class DIGRAPH(GRAPH):
