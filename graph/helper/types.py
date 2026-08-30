@@ -5,24 +5,25 @@ class _GraphAdd:
     def node(self, *nodes):
         if not nodes:
             return self.graph
-
         from typed.mods.check import require
         require.isterm(set(nodes), self.graph.__class__.__nodes_type__)
         self.graph.__nodes__.update(nodes)
+        import weakref
+        for n in nodes:
+            if not hasattr(n, "__graphs__"):
+                n.__graphs__ = weakref.WeakSet()
+            n.__graphs__.add(self.graph)
         return self.graph
 
     def edge(self, *edges, directed=None):
         if not edges:
             return self.graph
-
         from typed.mods.check import require
         from typed.mods.err import TypeErr
-
         require.isterm(set(edges), self.graph.__class__.__edges_type__)
-
         graph_order = self.graph.__order__
         graph_directed = self.graph.__directed__
-
+        import weakref
         for e in edges:
             if graph_order is not None:
                 e_order = getattr(e, "__order__", len(getattr(e, "__nodes__", [])))
@@ -31,7 +32,6 @@ class _GraphAdd:
                         message=f"Graph requires edges of order {graph_order}, but received {e_order}",
                         term=e
                     )
-
             is_directed = None
             if graph_directed is not None:
                 is_directed = graph_directed
@@ -39,11 +39,17 @@ class _GraphAdd:
                 is_directed = directed
             else:
                 is_directed = getattr(e, "__directed__", None)
-
             e.__directed__ = is_directed
             self.graph.__edges__.add(e)
-            self.graph.__nodes__.update(getattr(e, '__nodes__', []))
-
+            if not hasattr(e, "__graphs__"):
+                e.__graphs__ = weakref.WeakSet()
+            e.__graphs__.add(self.graph)
+            e_nodes = getattr(e, '__nodes__', [])
+            self.graph.__nodes__.update(e_nodes)
+            for n in e_nodes:
+                if not hasattr(n, "__graphs__"):
+                    n.__graphs__ = weakref.WeakSet()
+                n.__graphs__.add(self.graph)
         return self.graph
 
 class _AcyclicAdd(_GraphAdd):
@@ -89,6 +95,16 @@ class _GraphRm:
         if stale_edges:
             self.graph.__edges__.difference_update(stale_edges)
 
+        for n in nodes_set:
+            graphs = getattr(n, "__graphs__", None)
+            if graphs is not None:
+                graphs.discard(self.graph)
+
+        for e in stale_edges:
+            graphs = getattr(e, "__graphs__", None)
+            if graphs is not None:
+                graphs.discard(self.graph)
+
         return self.graph
 
     def edge(self, *edges, cleanup=False):
@@ -96,6 +112,11 @@ class _GraphRm:
             return self.graph
 
         self.graph.__edges__.difference_update(edges)
+
+        for e in edges:
+            graphs = getattr(e, "__graphs__", None)
+            if graphs is not None:
+                graphs.discard(self.graph)
 
         if cleanup:
             self.graph.cleanup()

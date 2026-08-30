@@ -5,11 +5,20 @@ from graph.helper.types import _GraphAdd, _GraphRm, _AcyclicAdd, _DigraphAdd
 class Node(Model, metaclass=NODE):
     __is_base_model__ = True
 
+    def graphsof(self):
+        return set(getattr(self, "__graphs__", []))
+
 class Edge(Model, metaclass=EDGE):
     __is_base_model__ = True
 
     def orderof(self):
         return getattr(self, "__order__", -1)
+
+    def nodesof(self):
+        return set(getattr(self, "__nodes__", []))
+
+    def graphsof(self):
+        return set(getattr(self, "__graphs__", []))
 
     def __issub__(self, other):
         if not hasattr(other, "__nodes__"):

@@ -12,7 +12,8 @@ class prop:
             from typed.mods.err import TypeErr
             raise TypeErr(
                 message="Edge not found in graph",
-                term=edge
+                term=edge,
+                expected="Edge in graph"
             )
         if edges is not NotDefined:
             return getattr(edge, "__nodes__", [])
@@ -31,7 +32,8 @@ class prop:
             from typed.mods.err import TypeErr
             raise TypeErr(
                 message="Node not found in graph",
-                term=node
+                term=node,
+                expected="Node in graph"
             )
         edges = getattr(entity, "__edges__", NotDefined)
         if edges is not NotDefined:
@@ -69,7 +71,8 @@ class prop:
             from typed.mods.err import TypeErr
             raise TypeErr(
                 message="One or more nodes not found in graph",
-                term=nodes
+                term=nodes,
+                expected="Nodes in graph"
             )
         if len(nodes_set) == 1:
             degs = getattr(entity, "__degrees__", None)
@@ -105,7 +108,8 @@ class prop:
             from typed.mods.err import TypeErr
             raise TypeErr(
                 message="Node not found in graph",
-                term=node
+                term=node,
+                expected="Node in graph"
             )
         adj = getattr(entity, "__adjacency__", None)
         if adj is None:
