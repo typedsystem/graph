@@ -41,6 +41,12 @@ class prop:
         return NotDefined
 
     @staticmethod
+    def graphsof(entity):
+        from typed import NotDefined
+        graphs = getattr(entity, "__graphs__", NotDefined)
+        return set(graphs) if graphs is not NotDefined else graphs
+
+    @staticmethod
     def orderof(entity):
         from typed.mods.err import NotDefined
         edges = getattr(entity, "__edges__", NotDefined)
@@ -129,3 +135,77 @@ class prop:
             if adj is NotDefined:
                 return NotDefined
         return {n for n, neighbors in adj.items() if not neighbors}
+
+    @staticmethod
+    def componentof(entity, element):
+        from typed.mods.err import NotDefined
+        from typed.mods.err import TypeErr
+        nodes = getattr(entity, "__nodes__", NotDefined)
+        if nodes is NotDefined:
+            return NotDefined
+        if hasattr(element, "__nodes__"):
+            edges = getattr(entity, "__edges__", NotDefined)
+            if edges is not NotDefined and element not in edges:
+                raise TypeErr(
+                    message="Edge not found in graph",
+                    term=element,
+                    expected="Edge in graph"
+                )
+            start_nodes = getattr(element, "__nodes__", [])
+        else:
+            if element not in nodes:
+                raise TypeErr(
+                    message="Node not found in graph",
+                    term=element,
+                    expected="Node in graph"
+                )
+            start_nodes = [element]
+        comps = getattr(entity, "__components__", None)
+        if comps is not None:
+            start_set = set(start_nodes)
+            for comp in comps:
+                comp_nodes = getattr(comp, "__nodes__", set())
+                if start_set.issubset(comp_nodes):
+                    return comp
+            return NotDefined
+        if not start_nodes:
+            return entity.induced()
+        comp_nodes = set()
+        from graph.mods.func import traverse
+        for curr, _ in traverse(
+            entity=entity,
+            start=start_nodes[0],
+            mode="dfs"
+        ):
+            comp_nodes.add(curr)
+        return entity.induced(*comp_nodes)
+
+    @staticmethod
+    def componentsof(entity):
+        from typed.mods.err import NotDefined
+        comps = getattr(entity, "__components__", None)
+        if comps is not None:
+            for comp in comps:
+                yield comp
+            return
+        nodes = getattr(entity, "__nodes__", NotDefined)
+        if nodes is NotDefined:
+            return
+        visited = set()
+        components = []
+        from graph.mods.func import traverse, induced
+        for n in nodes:
+            if n not in visited:
+                comp_nodes = set()
+                for curr, _ in traverse(
+                    entity=entity,
+                    start=n,
+                    mode="dfs"
+                ):
+                    comp_nodes.add(curr)
+                visited.update(comp_nodes)
+                comp = induced(*comp_nodes)
+                components.append(comp)
+                yield comp
+
+        entity.__components__ = components

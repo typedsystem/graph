@@ -1,4 +1,5 @@
 from typed.checker import Checker
+from typed.mods.typesystem import iscongruent
 
 class GraphChecker(Checker):
     def isnode(self, entity) -> bool:
@@ -238,6 +239,32 @@ class GraphChecker(Checker):
             )
         return is_comp
 
+    def isconnected(
+        self,
+        entity
+    ) -> bool:
+        from graph.mods.prop import prop
+        from typed.mods.err import NotDefined
+        from typed.mods.err import TypeErr
+        nodes = prop.nodesof(entity)
+        if nodes is NotDefined:
+            if self.explode:
+                raise TypeErr(
+                    message="Entity is missing nodes or edges",
+                    term=entity
+                )
+            return False
+        if not nodes:
+            return True
+        comps = list(prop.componentsof(entity))
+        is_conn = len(comps) == 1
+        if not is_conn and self.explode:
+            raise TypeErr(
+                message="Graph is not connected",
+                term=entity
+            )
+        return is_conn
+
 __require__ = GraphChecker(
     quantifier=None,
     explode=True
@@ -265,11 +292,12 @@ class check:
         ishyper = __check__.ishyper
 
     class graph:
-        isgraph    = __check__.isgraph
-        isdirected = __check__.isdirected
-        isregular  = __check__.isregular
-        isacyclic  = __check__.isacyclic
-        iscomplete = __check__.iscomplete
+        isgraph     = __check__.isgraph
+        isdirected  = __check__.isdirected
+        isregular   = __check__.isregular
+        isacyclic   = __check__.isacyclic
+        iscomplete  = __check__.iscomplete
+        isconnected = __check__.isconnected
 
 class require:
     some   = __require__.some
@@ -288,8 +316,9 @@ class require:
         ishyper = __require__.ishyper
 
     class graph:
-        isgraph    = __require__.isgraph
-        isdirected = __require__.isdirected
-        isregular  = __require__.isregular
-        isacyclic  = __require__.isacyclic
-        iscomplete = __require__.iscomplete
+        isgraph     = __require__.isgraph
+        isdirected  = __require__.isdirected
+        isregular   = __require__.isregular
+        isacyclic   = __require__.isacyclic
+        iscomplete  = __require__.iscomplete
+        isconnected = __require__.isconnected
