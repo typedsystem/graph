@@ -177,6 +177,9 @@ class GraphChecker(Checker):
         from typed import check
         return check.isterm(entity, Acyclic)
 
+    def isdga(self, entity) -> bool:
+        return self.isdirected(entity) and self.isacyclic(entity)
+
     def isregular(self, entity) -> bool:
         from graph.mods.prop import prop
         from typed import NotDefined
@@ -239,10 +242,7 @@ class GraphChecker(Checker):
             )
         return is_comp
 
-    def isconnected(
-        self,
-        entity
-    ) -> bool:
+    def isconnected(self, entity):
         from graph.mods.prop import prop
         from typed.mods.err import NotDefined
         from typed.mods.err import TypeErr
@@ -256,7 +256,7 @@ class GraphChecker(Checker):
             return False
         if not nodes:
             return True
-        comps = list(prop.componentsof(entity))
+        comps = list(prop.compsof(entity))
         is_conn = len(comps) == 1
         if not is_conn and self.explode:
             raise TypeErr(

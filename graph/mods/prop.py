@@ -137,29 +137,29 @@ class prop:
         return {n for n, neighbors in adj.items() if not neighbors}
 
     @staticmethod
-    def componentof(entity, element):
+    def compof(entity, item):
         from typed.mods.err import NotDefined
         from typed.mods.err import TypeErr
         nodes = getattr(entity, "__nodes__", NotDefined)
         if nodes is NotDefined:
             return NotDefined
-        if hasattr(element, "__nodes__"):
+        if hasattr(item, "__nodes__"):
             edges = getattr(entity, "__edges__", NotDefined)
-            if edges is not NotDefined and element not in edges:
+            if edges is not NotDefined and item not in edges:
                 raise TypeErr(
                     message="Edge not found in graph",
-                    term=element,
+                    term=item,
                     expected="Edge in graph"
                 )
-            start_nodes = getattr(element, "__nodes__", [])
+            start_nodes = getattr(item, "__nodes__", [])
         else:
-            if element not in nodes:
+            if item not in nodes:
                 raise TypeErr(
                     message="Node not found in graph",
-                    term=element,
+                    term=item,
                     expected="Node in graph"
                 )
-            start_nodes = [element]
+            start_nodes = [item]
         comps = getattr(entity, "__components__", None)
         if comps is not None:
             start_set = set(start_nodes)
@@ -171,17 +171,17 @@ class prop:
         if not start_nodes:
             return entity.induced()
         comp_nodes = set()
-        from graph.mods.func import traverse
+        from graph.mods.func import traverse, induced
         for curr, _ in traverse(
-            entity=entity,
+            entity,
             start=start_nodes[0],
             mode="dfs"
         ):
             comp_nodes.add(curr)
-        return entity.induced(*comp_nodes)
+        return induced(entity, *comp_nodes)
 
     @staticmethod
-    def componentsof(entity):
+    def compsof(entity):
         from typed.mods.err import NotDefined
         comps = getattr(entity, "__components__", None)
         if comps is not None:
@@ -198,14 +198,13 @@ class prop:
             if n not in visited:
                 comp_nodes = set()
                 for curr, _ in traverse(
-                    entity=entity,
+                    entity,
                     start=n,
                     mode="dfs"
                 ):
                     comp_nodes.add(curr)
                 visited.update(comp_nodes)
-                comp = induced(*comp_nodes)
+                comp = induced(entity, *comp_nodes)
                 components.append(comp)
                 yield comp
-
         entity.__components__ = components

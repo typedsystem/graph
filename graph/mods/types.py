@@ -82,6 +82,17 @@ class Graph(metaclass=GRAPH):
     def loopsof(self):
         return {e for e in getattr(self, "__edges__", set()) if len(set(getattr(e, "__nodes__", []))) == 1}
 
+    def compof(self, item):
+        from graph.mods.prop import prop
+        return prop.compof(
+            entity=self,
+            item=item
+        )
+
+    def compsof(self):
+        from graph.mods.prop import prop
+        return prop.compsof(entity=self)
+
     def cleanup(self):
         active_nodes = set()
         for e in getattr(self, "__edges__", set()):
