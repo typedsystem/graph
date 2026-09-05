@@ -1,4 +1,3 @@
-# graph/mods/prop.py
 class prop:
     @staticmethod
     def nodesof(entity):
@@ -38,10 +37,9 @@ class prop:
 
     @staticmethod
     def neighboorsof(entity, node):
-        from typed.mods.err import NotDefined
+        from typed.mods.err import NotDefined, TypeErr
         nodes = getattr(entity, "__nodes__", NotDefined)
         if nodes is not NotDefined and node not in nodes:
-            from typed.mods.err import TypeErr
             raise TypeErr(
                 message="Node not found in graph",
                 term=node,
@@ -50,13 +48,20 @@ class prop:
         graphs = getattr(node, "__graphs__", None)
         if graphs is not None and entity in graphs:
             neighbors = set()
+            is_digraph = hasattr(entity, "arrowsof")
             for e in graphs[entity]:
                 e_nodes = getattr(e, "__nodes__", [])
-                for n in e_nodes:
-                    if n != node:
-                        neighbors.add(n)
-                    elif len(e_nodes) == 1 or (isinstance(e_nodes, (list, tuple)) and e_nodes.count(node) > 1):
-                        neighbors.add(n)
+                if is_digraph or isinstance(e_nodes, list):
+                    e_nodes_list = list(e_nodes)
+                    if e_nodes_list and e_nodes_list[0] == node:
+                        for n in e_nodes_list[1:]:
+                            neighbors.add(n)
+                else:
+                    for n in e_nodes:
+                        if n != node:
+                            neighbors.add(n)
+                        elif len(e_nodes) == 1 or (isinstance(e_nodes, (list, tuple)) and e_nodes.count(node) > 1):
+                            neighbors.add(n)
             return neighbors
         return set()
 
@@ -82,16 +87,10 @@ class prop:
 
     @staticmethod
     def orphansof(entity):
-        from typed.mods.err import NotDefined
+        from typed import NotDefined
+        from graph.mods.checker import check
         nodes = getattr(entity, "__nodes__", NotDefined)
-        if nodes is NotDefined:
-            return NotDefined
-        orphans = set()
-        for n in nodes:
-            graphs = getattr(n, "__graphs__", None)
-            if graphs is None or entity not in graphs or not graphs[entity]:
-                orphans.add(n)
-        return orphans
+        return nodes if nodes is NotDefined else {n for n in nodes if check.node.isorphan(n, entity)} 
 
     @staticmethod
     def compof(entity, item):

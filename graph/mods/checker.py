@@ -1,72 +1,11 @@
 from typed.checker import Checker
 
-class NodeChecker(Checker):
+class BaseChecker(Checker):
     def isnode(self, entity):
         from typed.checker import typecheck
         from graph.mods.types import Node
         return typecheck(self, entity, Node)
 
-    def isorphan(self, node, graph=None):
-        if not self.isnode(node):
-            return False
-        from graph.mods.prop import prop
-        from typed.mods.err import NotDefined
-        graphs = getattr(node, "__graphs__", None)
-        if not graphs:
-            return True
-        if graph is not None:
-            if graph not in graphs:
-                if self.explode:
-                    from typed.mods.err import TypeErr
-                    raise TypeErr(
-                        message="Node does not belong to the specified graph",
-                        term=node,
-                        expected=("Node in specified graph",)
-                    )
-                return False
-            try:
-                degree = prop.degreeof(graph, node)
-            except Exception:
-                if self.explode:
-                    raise
-                return False
-            if degree is NotDefined:
-                if self.explode:
-                    from typed.mods.err import TypeErr
-                    raise TypeErr(
-                        message="Node not found in graph or invalid graph structure",
-                        term=node,
-                        expected=("Node in graph",)
-                    )
-                return False
-            is_orph = degree == 0
-            if not is_orph and self.explode:
-                from typed.mods.err import TypeErr
-                raise TypeErr(
-                    message="Node is not an orphan (degree > 0) in the specified graph",
-                    term=node,
-                    expected=("Orphan node",)
-                )
-            return is_orph
-        for g in graphs:
-            try:
-                degree = prop.degreeof(g, node)
-            except Exception:
-                if self.explode:
-                    raise
-                return False
-            if degree is not NotDefined and degree > 0:
-                if self.explode:
-                    from typed.mods.err import TypeErr
-                    raise TypeErr(
-                        message="Node is not an orphan in at least one of its graphs",
-                        term=node,
-                        expected=("Orphan node in all graphs",)
-                    )
-                return False
-        return True
-
-class BaseChecker(Checker):
     def isedge(self, entity):
         from typed.checker import typecheck
         from graph.mods.types import Edge
@@ -77,24 +16,85 @@ class BaseChecker(Checker):
         from graph.mods.types import Arrow
         return typecheck(self, entity, Arrow)
 
+    def isgraph(self, entity):
+        from typed.checker import typecheck
+        from graph.mods.types import Graph
+        return typecheck(self, entity, Graph)
+
+    def isdigraph(self, entity):
+        from typed.checker import typecheck
+        from graph.mods.types import Digraph
+        return typecheck(self, entity, Digraph)
+
+class NodeChecker(Checker):
+    def isorphan(self, node, graph=None):
+        if not self.isnode(node):
+            if self.explode:
+                from typed.mods.err import TypeErr
+                raise TypeErr(
+                    message="Entity is not a node",
+                    term=node,
+                    expected=("Node",)
+                )
+            return False
+
+        from graph.mods.prop import prop
+        from typed.mods.err import NotDefined
+
+        if graph is not None:
+            try:
+                degree = prop.degreeof(graph, node)
+            except Exception:
+                if self.explode:
+                    raise
+                return False
+
+            is_orph = degree == 0
+            if not is_orph and self.explode:
+                from typed.mods.err import TypeErr
+                raise TypeErr(
+                    message="Node is not an orphan in the specified graph",
+                    term=node,
+                    expected=("Orphan node",)
+                )
+            return is_orph
+
+        graphs = getattr(node, "__graphs__", None)
+        if not graphs:
+            return True
+
+        for g in graphs:
+            try:
+                degree = prop.degreeof(g, node)
+            except Exception:
+                if self.explode:
+                    raise
+                return False
+
+            if degree is NotDefined or degree > 0:
+                if self.explode:
+                    from typed.mods.err import TypeErr
+                    raise TypeErr(
+                        message="Node is not an orphan in at least one of its graphs",
+                        term=node,
+                        expected=("Orphan node in all graphs",)
+                    )
+                return False
+
+        return True
+
+class GeneralChecker(Checker):
     def ishyper(self, entity):
         order = getattr(entity, "__order__", None)
         return True if isinstance(order, int) and order > 2 else False
 
+class LineChecker(GeneralChecker):
     def isloop(self, entity):
         from typed.checker import typecheck
         from graph.mods.types import Loop
         return typecheck(self, entity, Loop)
 
 class GraphChecker(BaseChecker):
-    def isgraph(self, entity):
-        from graph.mods.types import Graph
-        if self.explode:
-            from typed.mods.check import require
-            require.isterm(entity, Graph)
-        from typed.mods.check import check
-        return check.isterm(entity, Graph)
-
     def isacyclic(self, entity):
         from graph.mods.types import Acyclic
         if self.explode:
@@ -179,14 +179,6 @@ class GraphChecker(BaseChecker):
         return is_conn
 
 class DigraphChecker(BaseChecker):
-    def isdigraph(self, entity):
-        from graph.mods.types import Digraph
-        if self.explode:
-            from typed.mods.check import require
-            require.isterm(entity, Digraph)
-        from typed.mods.check import check
-        return check.isterm(entity, Digraph)
-
     def isdag(self, entity):
         if self.explode:
             __digraph_require__.isdigraph(entity)
