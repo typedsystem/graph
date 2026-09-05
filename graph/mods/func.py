@@ -89,18 +89,15 @@ def spanning(graph, *elements, exclude: bool = False, freeze: bool = False):
     return subgraph
 
 def traverse(graph, start=None, mode="dfs"):
-    from typed import NotDefined
-    nodes = getattr(graph, "__nodes__", NotDefined)
+    from typed.mods.err import NotDefined, TypeErr
+    from graph.mods.prop import prop
+
+    nodes = prop.nodesof(entity=graph)
     if nodes is NotDefined:
         return
-    adj = getattr(graph, "__adjacency__", None)
-    if adj is None:
-        from graph.helper.prop import _build_adjacency
-        adj = _build_adjacency(graph)
 
     if start is not None:
         if start not in nodes:
-            from typed.err import TypeErr
             raise TypeErr(
                 message="Start node not found in graph",
                 term=start,
@@ -135,7 +132,7 @@ def traverse(graph, start=None, mode="dfs"):
             curr = pop()
             if curr not in visited:
                 visited.add(curr)
-                neighbors = list(adj.get(curr, set()) - visited)
+                neighbors = list(prop.neighboorsof(entity=graph, node=curr) - visited)
                 yield curr, neighbors
 
                 if mode == "dfs":

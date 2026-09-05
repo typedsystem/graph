@@ -1,32 +1,44 @@
+# graph/mods/prop.py
 class prop:
     @staticmethod
-    def nodesof(entity, edge=None):
-        from typed.mods.err import NotDefined
-        if edge is None:
-            nodes = getattr(entity, "__nodes__", NotDefined)
-            if nodes is not NotDefined:
-                return nodes
-            return NotDefined
-        edges = getattr(entity, "__edges__", NotDefined)
-        if edges is not NotDefined and edge not in edges:
-            from typed.mods.err import TypeErr
-            raise TypeErr(
-                message="Edge not found in graph",
-                term=edge,
-                expected="Edge in graph"
-            )
-        if edges is not NotDefined:
-            return getattr(edge, "__nodes__", [])
+    def nodesof(entity):
+        from typed import NotDefined
+        return getattr(entity, "__nodes__", NotDefined)
+
+    @staticmethod
+    def edgesof(entity):
+        from typed import NotDefined
+        return getattr(entity, "__edges__", NotDefined)
+
+    @staticmethod
+    def graphsof(entity):
+        from typed import NotDefined
+        graphs = getattr(entity, "__graphs__", NotDefined)
+        return set(graphs.keys()) if graphs is not NotDefined else graphs
+
+    @staticmethod
+    def arrowsof(entity):
+        from typed import NotDefined
+        return getattr(entity, "__nodes__", NotDefined)
+
+    @staticmethod
+    def loopsof(entity):
+        from graph.helper.prop import _loopsof
+        if hasattr(entity, "__edges__"):
+            return _loopsof(entity, "__edges__")
+        if hasattr(entity, "__arrows__"):
+            return _loopsof(entity, "__arrows__")
+        from typed import NotDefined
         return NotDefined
 
     @staticmethod
-    def edgesof(entity, node=None):
+    def orderof(entity):
+        from typed import NotDefined
+        return getattr(entity, "__order__", NotDefined)
+
+    @staticmethod
+    def neighboorsof(entity, node):
         from typed.mods.err import NotDefined
-        if node is None:
-            edges = getattr(entity, "__edges__", NotDefined)
-            if edges is not NotDefined:
-                return edges
-            return NotDefined
         nodes = getattr(entity, "__nodes__", NotDefined)
         if nodes is not NotDefined and node not in nodes:
             from typed.mods.err import TypeErr
@@ -35,38 +47,18 @@ class prop:
                 term=node,
                 expected="Node in graph"
             )
-        edges = getattr(entity, "__edges__", NotDefined)
-        if edges is not NotDefined:
-            return {e for e in edges if node in getattr(e, "__nodes__", [])}
-        return NotDefined
-
-    @staticmethod
-    def graphsof(entity):
-        from typed import NotDefined
-        graphs = getattr(entity, "__graphs__", NotDefined)
-        return set(graphs) if graphs is not NotDefined else graphs
-
-    @staticmethod
-    def orderof(entity):
-        from typed.mods.err import NotDefined
-        edges = getattr(entity, "__edges__", NotDefined)
-        if edges is not NotDefined:
-            nodes = getattr(entity, "__nodes__", NotDefined)
-            if nodes is not NotDefined:
-                return len(nodes)
-        order = getattr(entity, "__order__", NotDefined)
-        if order is not NotDefined:
-            return order
-        return NotDefined
-
-    @staticmethod
-    def sizeof(entity):
-        from typed.mods.err import NotDefined
-        nodes = getattr(entity, "__nodes__", NotDefined)
-        edges = getattr(entity, "__edges__", NotDefined)
-        if nodes is not NotDefined and edges is not NotDefined:
-            return len(nodes) + len(edges)
-        return NotDefined
+        graphs = getattr(node, "__graphs__", None)
+        if graphs is not None and entity in graphs:
+            neighbors = set()
+            for e in graphs[entity]:
+                e_nodes = getattr(e, "__nodes__", [])
+                for n in e_nodes:
+                    if n != node:
+                        neighbors.add(n)
+                    elif len(e_nodes) == 1 or (isinstance(e_nodes, (list, tuple)) and e_nodes.count(node) > 1):
+                        neighbors.add(n)
+            return neighbors
+        return set()
 
     @staticmethod
     def degreeof(entity, *nodes):
@@ -80,61 +72,26 @@ class prop:
                 term=nodes,
                 expected="Nodes in graph"
             )
-        if len(nodes_set) == 1:
-            degs = getattr(entity, "__degrees__", None)
-            if degs is None:
-                from graph.helper.prop import _build_degrees
-                degs = _build_degrees(entity)
-            if degs is not NotDefined:
-                return degs.get(next(iter(nodes_set)), 0)
-        edges = getattr(entity, "__edges__", NotDefined)
-        if edges is not NotDefined:
-            count = 0
-            for e in edges:
-                if nodes_set.issubset(getattr(e, "__nodes__", [])):
-                    count += 1
-            return count
-        return NotDefined
-
-    @staticmethod
-    def loopsof(entity):
-        from typed.mods.err import NotDefined
-        edges = getattr(entity, "__edges__", NotDefined)
-        if edges is not NotDefined:
-            return {e for e in edges if len(set(getattr(e, "__nodes__", []))) == 1}
-        return NotDefined
-
-    @staticmethod
-    def neighboorsof(entity, node):
-        from typed.mods.err import NotDefined
-        nodes = getattr(entity, "__nodes__", NotDefined)
-        if nodes is not NotDefined:
+        if not nodes_set:
             return NotDefined
-        if node not in nodes:
-            from typed.mods.err import TypeErr
-            raise TypeErr(
-                message="Node not found in graph",
-                term=node,
-                expected="Node in graph"
-            )
-        adj = getattr(entity, "__adjacency__", None)
-        if adj is None:
-            from graph.helper.prop import _build_adjacency
-            adj = _build_adjacency(entity)
-            if adj is NotDefined:
-                return NotDefined
-        return set(adj.get(node, set()))
+        if len(nodes_set) == 1:
+            n = next(iter(nodes_set))
+            return len(prop.neighboorsof(entity=entity, node=n))
+        neighbors_list = [prop.neighboorsof(entity=entity, node=n) for n in nodes_set]
+        return len(set.intersection(*neighbors_list))
 
     @staticmethod
     def orphansof(entity):
         from typed.mods.err import NotDefined
-        adj = getattr(entity, "__adjacency__", None)
-        if adj is None:
-            from graph.helper.prop import _build_adjacency
-            adj = _build_adjacency(entity)
-            if adj is NotDefined:
-                return NotDefined
-        return {n for n, neighbors in adj.items() if not neighbors}
+        nodes = getattr(entity, "__nodes__", NotDefined)
+        if nodes is NotDefined:
+            return NotDefined
+        orphans = set()
+        for n in nodes:
+            graphs = getattr(n, "__graphs__", None)
+            if graphs is None or entity not in graphs or not graphs[entity]:
+                orphans.add(n)
+        return orphans
 
     @staticmethod
     def compof(entity, item):
@@ -170,14 +127,23 @@ class prop:
             return NotDefined
         if not start_nodes:
             return entity.induced()
+
         comp_nodes = set()
-        from graph.mods.func import traverse, induced
-        for curr, _ in traverse(
-            entity,
-            start=start_nodes[0],
-            mode="dfs"
-        ):
-            comp_nodes.add(curr)
+        visited = set()
+        frontier = list(start_nodes)
+        while frontier:
+            curr = frontier.pop()
+            if curr not in visited:
+                visited.add(curr)
+                comp_nodes.add(curr)
+                graphs = getattr(curr, "__graphs__", None)
+                if graphs is not None and entity in graphs:
+                    for e in graphs[entity]:
+                        for neighbor in getattr(e, "__nodes__", []):
+                            if neighbor not in visited:
+                                frontier.append(neighbor)
+
+        from graph.mods.func import induced
         return induced(entity, *comp_nodes)
 
     @staticmethod
@@ -193,17 +159,23 @@ class prop:
             return
         visited = set()
         components = []
-        from graph.mods.func import traverse, induced
+        from graph.mods.func import induced
         for n in nodes:
             if n not in visited:
                 comp_nodes = set()
-                for curr, _ in traverse(
-                    entity,
-                    start=n,
-                    mode="dfs"
-                ):
-                    comp_nodes.add(curr)
-                visited.update(comp_nodes)
+                frontier = [n]
+                while frontier:
+                    curr = frontier.pop()
+                    if curr not in visited:
+                        visited.add(curr)
+                        comp_nodes.add(curr)
+                        graphs = getattr(curr, "__graphs__", None)
+                        if graphs is not None and entity in graphs:
+                            for e in graphs[entity]:
+                                for neighbor in getattr(e, "__nodes__", []):
+                                    if neighbor not in visited:
+                                        frontier.append(neighbor)
+
                 comp = induced(entity, *comp_nodes)
                 components.append(comp)
                 yield comp

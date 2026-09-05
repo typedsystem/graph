@@ -1,25 +1,22 @@
-def _build_adjacency(entity):
-    from typed import NotDefined
-    import weakref
-    edges = getattr(entity, "__edges__", NotDefined)
-    nodes = getattr(entity, "__nodes__", NotDefined)
+def _sizeof(self, attr):
+    return len(getattr(self, "__nodes__", set())) + len(getattr(self, attr, set()))
 
-    if edges is NotDefined or nodes is NotDefined:
+def _loopsof(self, attr):
+    return {e for e in getattr(self, attr, set()) if len(set(getattr(e, "__nodes__", []))) == 1}
+
+def _adjacency(entity, attr):
+    from typed.mods.err import NotDefined
+    from graph.mods.prop import prop
+    import weakref
+
+    nodes = getattr(entity, "__nodes__", NotDefined)
+    if nodes is NotDefined:
         return NotDefined
 
-    try:
-        adj = weakref.WeakKeyDictionary()
-        for n in nodes:
-            adj[n] = set()
-    except TypeError:
-        adj = {n: set() for n in nodes}
+    adj = weakref.WeakKeyDictionary()
+    for n in nodes:
+        adj[n] = prop.neighboorsof(entity, n)
 
-    for e in edges:
-        e_nodes = getattr(e, "__nodes__", [])
-        for n in e_nodes:
-            if n not in adj:
-                adj[n] = set()
-            adj[n].update(e_nodes)
     entity.__adjacency__ = adj
     return adj
 
@@ -28,17 +25,14 @@ def _build_degrees(entity):
     import weakref
     edges = getattr(entity, "__edges__", NotDefined)
     nodes = getattr(entity, "__nodes__", NotDefined)
-
     if edges is NotDefined or nodes is NotDefined:
         return NotDefined
-
     try:
         degs = weakref.WeakKeyDictionary()
         for n in nodes:
             degs[n] = 0
     except TypeError:
         degs = {n: 0 for n in nodes}
-
     for e in edges:
         for n in getattr(e, "__nodes__", []):
             degs[n] = degs.get(n, 0) + 1
